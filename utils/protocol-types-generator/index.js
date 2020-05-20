@@ -20,170 +20,168 @@ const fetchAndGenerateProtocolDefinitions = () =>
       const version = await browser.version();
       await browser.close();
       const output = `// This is generated from /utils/protocol-types-generator/index.js
-  type binary = string;
-declare global {
-  module Protocol {${json.domains
-    .map(
-      (domain) => `${
-        domain.description
-          ? `
-    /**
-     * ${domain.description}
-     */`
-          : ''
-      }
-    export module ${domain.domain} {${(domain.types || [])
+type binary = string;
+
+declare module Protocol {${json.domains
         .map(
-          (type) =>
+          (domain) => `${
+            domain.description
+              ? `
+  /**
+   * ${domain.description}
+   */`
+              : ''
+          }
+  export module ${domain.domain} {${(domain.types || [])
+            .map(
+              (type) =>
+                `${
+                  type.description
+                    ? `
+      /**
+       * ${type.description}
+       */`
+                    : ''
+                }${
+                  type.properties
+                    ? `
+      export interface ${type.id} {${(type.properties || [])
+                        .map(
+                          (property) => `${
+                            property.description
+                              ? `
+          /**
+           * ${property.description}
+           */`
+                              : ''
+                          }
+          ${property.name}${property.optional ? '?' : ''}: ${typeOfProperty(
+                            property
+                          )};`
+                        )
+                        .join(``)}
+      }`
+                    : `
+      export type ${type.id} = ${typeOfProperty(type)};`
+                }`
+            )
+            .join('')}
+      ${(domain.events || [])
+        .map(
+          (event) =>
             `${
-              type.description
+              event.description
                 ? `
-        /**
-         * ${type.description}
-         */`
+      /**
+       * ${event.description}
+       */`
                 : ''
             }${
-              type.properties
+              event.parameters
                 ? `
-        export interface ${type.id} {${(type.properties || [])
+      export type ${event.name}Payload = {${event.parameters
                     .map(
-                      (property) => `${
-                        property.description
+                      (parameter) => `${
+                        parameter.description
                           ? `
-            /**
-             * ${property.description}
-             */`
+          /**
+           * ${parameter.description}
+           */`
                           : ''
                       }
-            ${property.name}${property.optional ? '?' : ''}: ${typeOfProperty(
-                        property
+          ${parameter.name}${parameter.optional ? '?' : ''}: ${typeOfProperty(
+                        parameter
                       )};`
                     )
                     .join(``)}
-        }`
+      }`
                 : `
-        export type ${type.id} = ${typeOfProperty(type)};`
+      export type ${event.name}Payload = void;`
             }`
         )
         .join('')}
-        ${(domain.events || [])
-          .map(
-            (event) =>
-              `${
-                event.description
+      ${(domain.commands || [])
+        .map(
+          (command) => `${
+            command.description
+              ? `
+      /**
+       * ${command.description}
+       */`
+              : ''
+          }
+      export type ${command.name}Parameters = {${(command.parameters || [])
+            .map(
+              (parameter) => `${
+                parameter.description
                   ? `
-        /**
-         * ${event.description}
-         */`
+          /**
+           * ${parameter.description}
+           */`
                   : ''
-              }${
-                event.parameters
+              }
+          ${parameter.name}${parameter.optional ? '?' : ''}: ${typeOfProperty(
+                parameter
+              )};`
+            )
+            .join(``)}
+      }
+      export type ${command.name}ReturnValue = {${(command.returns || [])
+            .map(
+              (retVal) => `${
+                retVal.description
                   ? `
-        export type ${event.name}Payload = {${event.parameters
-                      .map(
-                        (parameter) => `${
-                          parameter.description
-                            ? `
-            /**
-             * ${parameter.description}
-             */`
-                            : ''
-                        }
-            ${parameter.name}${parameter.optional ? '?' : ''}: ${typeOfProperty(
-                          parameter
-                        )};`
-                      )
-                      .join(``)}
-        }`
-                  : `
-        export type ${event.name}Payload = void;`
-              }`
-          )
-          .join('')}
-        ${(domain.commands || [])
-          .map(
-            (command) => `${
-              command.description
-                ? `
-        /**
-         * ${command.description}
-         */`
-                : ''
-            }
-        export type ${command.name}Parameters = {${(command.parameters || [])
-              .map(
-                (parameter) => `${
-                  parameter.description
-                    ? `
-            /**
-             * ${parameter.description}
-             */`
-                    : ''
-                }
-            ${parameter.name}${parameter.optional ? '?' : ''}: ${typeOfProperty(
-                  parameter
-                )};`
-              )
-              .join(``)}
-        }
-        export type ${command.name}ReturnValue = {${(command.returns || [])
-              .map(
-                (retVal) => `${
-                  retVal.description
-                    ? `
-            /**
-             * ${retVal.description}
-             */`
-                    : ''
-                }
-            ${retVal.name}${retVal.optional ? '?' : ''}: ${typeOfProperty(
-                  retVal
-                )};`
-              )
-              .join(``)}
-        }`
-          )
-          .join('')}
-    }
-    `
+          /**
+           * ${retVal.description}
+           */`
+                  : ''
+              }
+          ${retVal.name}${retVal.optional ? '?' : ''}: ${typeOfProperty(
+                retVal
+              )};`
+            )
+            .join(``)}
+      }`
+        )
+        .join('')}
+  }
+  `
+        )
+        .join('')}
+  export interface Events {${json.domains
+    .map((domain) =>
+      (domain.events || [])
+        .map(
+          (event) => `
+    "${domain.domain}.${event.name}": ${domain.domain}.${event.name}Payload;`
+        )
+        .join('')
     )
     .join('')}
-    export interface Events {${json.domains
-      .map((domain) =>
-        (domain.events || [])
-          .map(
-            (event) => `
-      "${domain.domain}.${event.name}": ${domain.domain}.${event.name}Payload;`
-          )
-          .join('')
-      )
-      .join('')}
-    }
-    export interface CommandParameters {${json.domains
-      .map((domain) =>
-        (domain.commands || [])
-          .map(
-            (command) => `
-      "${domain.domain}.${command.name}": ${domain.domain}.${command.name}Parameters;`
-          )
-          .join('')
-      )
-      .join('')}
-    }
-    export interface CommandReturnValues {${json.domains
-      .map((domain) =>
-        (domain.commands || [])
-          .map(
-            (command) => `
-      "${domain.domain}.${command.name}": ${domain.domain}.${command.name}ReturnValue;`
-          )
-          .join('')
-      )
-      .join('')}
-    }
+  }
+  export interface CommandParameters {${json.domains
+    .map((domain) =>
+      (domain.commands || [])
+        .map(
+          (command) => `
+    "${domain.domain}.${command.name}": ${domain.domain}.${command.name}Parameters;`
+        )
+        .join('')
+    )
+    .join('')}
+  }
+  export interface CommandReturnValues {${json.domains
+    .map((domain) =>
+      (domain.commands || [])
+        .map(
+          (command) => `
+    "${domain.domain}.${command.name}": ${domain.domain}.${command.name}ReturnValue;`
+        )
+        .join('')
+    )
+    .join('')}
   }
 }
-
 export default Protocol;
 `;
 
